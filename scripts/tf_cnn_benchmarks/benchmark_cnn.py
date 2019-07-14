@@ -734,7 +734,7 @@ def create_config_proto(params):
     params: Params tuple, typically created by make_params or
             make_params_from_flags.
   """
-  config = tf.ConfigProto()
+  config = tf.compat.v1.ConfigProto()
   config.allow_soft_placement = True
   if params.num_intra_threads is None:
     if params.device == 'gpu':
@@ -927,7 +927,7 @@ def benchmark_one_step(sess,
         log_fn('Writing partitioned GraphDef as %s to %s' % (
             'text' if as_text else 'binary',
             os.path.join(path, graph_filename)))
-        tf.train.write_graph(graph_def, path, graph_filename, as_text)
+        tf.compat.v1.train.write_graph(graph_def, path, graph_filename, as_text)
   return (summary_str, lossval)
 
 
@@ -994,7 +994,7 @@ def _get_checkpoint_to_load(ckpt_dir):
     model_checkpoint_path = ckpt_dir
   else:
     # Finds latest checkpoint in directory provided
-    ckpt = tf.train.get_checkpoint_state(ckpt_dir)
+    ckpt = tf.compat.v1.train.get_checkpoint_state(ckpt_dir)
     if ckpt and ckpt.model_checkpoint_path:
       model_checkpoint_path = ckpt.model_checkpoint_path
     else:
@@ -1150,7 +1150,7 @@ def get_piecewise_learning_rate(piecewise_learning_rate_schedule,
         boundaries.append(int(int(piece) * num_batches_per_epoch) - 1)
       except ValueError:
         raise ValueError('Invalid epoch: ' + piece)
-  return tf.train.piecewise_constant(global_step, boundaries, values,
+  return tf.compat.v1.train.piecewise_constant(global_step, boundaries, values,
                                      name='piecewise_learning_rate')
 
 
@@ -1194,7 +1194,7 @@ def get_learning_rate(params, global_step, num_examples_per_epoch, model,
         decay_steps = int(num_batches_per_epoch * params.num_epochs_per_decay)
 
         # Decay the learning rate exponentially based on the number of steps.
-        learning_rate = tf.train.exponential_decay(
+        learning_rate = tf.compat.v1.train.exponential_decay(
             params.init_learning_rate,
             global_step,
             decay_steps,
@@ -1230,19 +1230,19 @@ def get_optimizer(params, learning_rate):
     mlperf.logger.log(key=mlperf.tags.OPT_NAME,
                       value=mlperf.tags.SGD_WITH_MOMENTUM)
     mlperf.logger.log(key=mlperf.tags.OPT_MOMENTUM, value=params.momentum)
-    opt = tf.train.MomentumOptimizer(
+    opt = tf.compat.v1.train.MomentumOptimizer(
         learning_rate, params.momentum, use_nesterov=True)
   elif params.optimizer == 'sgd':
     mlperf.logger.log(key=mlperf.tags.OPT_NAME, value=mlperf.tags.SGD)
-    opt = tf.train.GradientDescentOptimizer(learning_rate)
+    opt = tf.compat.v1.train.GradientDescentOptimizer(learning_rate)
   elif params.optimizer == 'rmsprop':
-    opt = tf.train.RMSPropOptimizer(
+    opt = tf.compat.v1.train.RMSPropOptimizer(
         learning_rate,
         params.rmsprop_decay,
         momentum=params.rmsprop_momentum,
         epsilon=params.rmsprop_epsilon)
   elif params.optimizer == 'adam':
-    opt = tf.train.AdamOptimizer(learning_rate, params.adam_beta1,
+    opt = tf.compat.v1.train.AdamOptimizer(learning_rate, params.adam_beta1,
                                  params.adam_beta2, params.adam_epsilon)
   else:
     raise ValueError('Optimizer "{}" was not recognized'.
@@ -1484,7 +1484,7 @@ class BenchmarkCNN(object):
 
       worker_prefix = '/job:worker/replica:0/task:%s' % self.task_index
       if use_ps_server:
-        self.param_server_device = tf.train.replica_device_setter(
+        self.param_server_device = tf.compat.v1.train.replica_device_setter(
             worker_device=worker_prefix + '/cpu:0',
             cluster=self.cluster_manager.get_cluster_spec())
         # This device on which the queues for managing synchronization between
@@ -1891,7 +1891,7 @@ class BenchmarkCNN(object):
     if self.params.train_dir is None:
       raise ValueError('Trained model directory not specified')
     graph_info = self._build_eval_graph()
-    saver = tf.train.Saver(self.variable_mgr.savable_variables())
+    saver = tf.compat.v1.train.Saver(self.variable_mgr.savable_variables())
     summary_writer = tf.summary.FileWriter(self.params.eval_dir,
                                            tf.get_default_graph())
     target = ''
@@ -1973,7 +1973,7 @@ class BenchmarkCNN(object):
         # during training. This is OK.
         sess.run(local_var_init_op_group)
       if self.dataset.queue_runner_required():
-        tf.train.start_queue_runners(sess=sess)
+        tf.compat.v1.train.start_queue_runners(sess=sess)
       image_producer = None
       if input_producer_op is not None:
         image_producer = cnn_util.ImageProducer(
@@ -2115,7 +2115,7 @@ class BenchmarkCNN(object):
       execution_barrier = self.add_sync_queues_and_barrier(
           'execution_barrier_', [])
 
-    global_step = tf.train.get_global_step()
+    global_step = tf.compat.v1.train.get_global_step()
     with tf.device(self.global_step_device), tf.name_scope('inc_global_step'):
       with tf.control_dependencies([main_fetch_group]):
         fetches['inc_global_step'] = global_step.assign_add(1)
@@ -2133,8 +2133,8 @@ class BenchmarkCNN(object):
         local_var_init_op = tf.variables_initializer(
             self._unfreezable_local_variables(tf.get_default_graph()))
       else:
-        local_var_init_op = tf.local_variables_initializer()
-    table_init_ops = tf.tables_initializer()
+        local_var_init_op = tf.compat.v1.local_variables_initializer()
+    table_init_ops = tf.compat.v1.tables_initializer()
 
     variable_manager_init_ops = [local_var_init_op]
     if table_init_ops:
@@ -2151,7 +2151,7 @@ class BenchmarkCNN(object):
                                            variable_manager_init_ops))
     local_var_init_op_group = tf.group(*variable_manager_init_ops,
                                        name='local_var_init_op_group')
-    summary_op = tf.summary.merge_all()
+    summary_op = tf.compat.v1.summary.merge_all()
 
     return GraphInfo(
         input_producer_op=input_producer_op,
@@ -2208,7 +2208,7 @@ class BenchmarkCNN(object):
     # Running summaries and training operations in parallel could run out of
     # GPU memory.
     if is_chief and not self.forward_only_and_freeze:
-      saver = tf.train.Saver(
+      saver = tf.compat.v1.train.Saver(
           self.variable_mgr.savable_variables(),
           save_relative_paths=True,
           max_to_keep=self.params.max_ckpts_to_keep)
@@ -2234,10 +2234,10 @@ class BenchmarkCNN(object):
     if self.params.variable_update == 'collective_all_reduce':
       # It doesn't matter what this collective_graph_key value is,
       # so long as it's > 0 and the same at every worker.
-      init_run_options = tf.RunOptions()
+      init_run_options = tf.compat.v1.RunOptions()
       init_run_options.experimental.collective_graph_key = 6
     else:
-      init_run_options = tf.RunOptions()
+      init_run_options = tf.compat.v1.RunOptions()
     local_var_init_ops = [graph_info.local_var_init_op_group]
     if eval_graph_info:
       # `eval_graph_info.local_var_init_op_group` also includes some of the
@@ -2247,7 +2247,7 @@ class BenchmarkCNN(object):
       # same time can cause race conditions.
       with tf.control_dependencies(local_var_init_ops):
         local_var_init_ops.append(eval_graph_info.local_var_init_op_group)
-    sv = tf.train.Supervisor(
+    sv = tf.compat.v1.train.Supervisor(
         # For the purpose of Supervisor, all Horovod workers are 'chiefs',
         # since we want session to be initialized symmetrically on all the
         # workers.
@@ -2271,7 +2271,7 @@ class BenchmarkCNN(object):
       as_text = filename.endswith('txt')
       log_fn('Writing GraphDef as %s to %s' % (  # pyformat break
           'text' if as_text else 'binary', self.graph_file))
-      tf.train.write_graph(tf.get_default_graph().as_graph_def(add_shapes=True),
+      tf.compat.v1.train.write_graph(tf.get_default_graph().as_graph_def(add_shapes=True),
                            path, filename, as_text)
 
     start_standard_services = (
@@ -2787,7 +2787,7 @@ class BenchmarkCNN(object):
       seed_adjustment = 0
     mlperf.logger.log(key=mlperf.tags.RUN_SET_RANDOM_SEED,
                       value=self.params.tf_random_seed + seed_adjustment)
-    tf.set_random_seed(self.params.tf_random_seed + seed_adjustment)
+    tf.compat.v1.set_random_seed(self.params.tf_random_seed + seed_adjustment)
     mlperf.logger.log(key=mlperf.tags.RUN_SET_RANDOM_SEED,
                       value=4321 + seed_adjustment)
     np.random.seed(4321 + seed_adjustment)
@@ -2807,7 +2807,7 @@ class BenchmarkCNN(object):
     gpu_grad_stage_ops = []
 
     with tf.device(self.global_step_device):
-      global_step = tf.train.get_or_create_global_step()
+      global_step = tf.compat.v1.train.get_or_create_global_step()
       self._maybe_initialize_fp16()
 
     # Build the processing and model for the worker.
@@ -2853,7 +2853,7 @@ class BenchmarkCNN(object):
           # the moving averages for one tower. In parameter server mode, all
           # towers share a copy of the variables so we also only need to update
           # and save the moving averages once.
-          update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, name_scope)
+          update_ops = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS, name_scope)
           if self.datasets_use_prefetch:
             assert not self.variable_mgr.staging_delta_ops
           else:
@@ -2984,7 +2984,7 @@ class BenchmarkCNN(object):
           for grad, var in avg_grads:
             if grad is not None:
               tf.summary.histogram(var.op.name + '/gradients', grad)
-          for var in tf.trainable_variables():
+          for var in tf.compat.v1.trainable_variables():
             tf.summary.histogram(var.op.name, var)
 
     fetches['train_op'] = train_op
@@ -3037,7 +3037,7 @@ class BenchmarkCNN(object):
     gpu_grad_stage_ops = []
 
     with tf.device(self.global_step_device):
-      global_step = tf.train.get_or_create_global_step()
+      global_step = tf.compat.v1.train.get_or_create_global_step()
 
     update_ops = []
     global_input_producer_op = []
@@ -3528,7 +3528,7 @@ def setup(params):
     # is not legal to create distributed session after local session. It is also
     # not possible to create distributed session here as that results in
     # multiple creation of ClusterManager and Server.
-    with tf.Session(config=create_config_proto(params)) as sess:
+    with tf.compat.v1.Session(config=create_config_proto(params)) as sess:
       del sess
 
   return params

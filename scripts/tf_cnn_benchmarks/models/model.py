@@ -242,14 +242,14 @@ class CNNModel(Model):
   def get_synthetic_inputs(self, input_name, nclass):
     # Synthetic input should be within [0, 255].
     image_shape, label_shape = self.get_input_shapes('train')
-    inputs = tf.truncated_normal(
+    inputs = tf.random.truncated_normal(
         image_shape,
         dtype=self.data_type,
         mean=127,
         stddev=60,
         name=self.model_name + '_synthetic_inputs')
     inputs = tf.contrib.framework.local_variable(inputs, name=input_name)
-    labels = tf.random_uniform(
+    labels = tf.random.uniform(
         label_shape,
         minval=0,
         maxval=nclass - 1,
@@ -286,7 +286,7 @@ class CNNModel(Model):
     network = convnet_builder.ConvNetBuilder(
         images, self.depth, phase_train, self.use_tf_layers, self.data_format,
         self.data_type, var_type)
-    with tf.variable_scope('cg', custom_getter=network.get_custom_getter()):
+    with tf.compat.v1.variable_scope('cg', custom_getter=network.get_custom_getter()):
       self.add_inference(network)
       # Add the final fully-connected class layer
       logits = (
@@ -316,7 +316,7 @@ class CNNModel(Model):
     aux_logits = build_network_result.extra_info
     with tf.name_scope('xentropy'):
       mlperf.logger.log(key=mlperf.tags.MODEL_HP_LOSS_FN, value=mlperf.tags.CCE)
-      cross_entropy = tf.losses.sparse_softmax_cross_entropy(
+      cross_entropy = tf.compat.v1.losses.sparse_softmax_cross_entropy(
           logits=logits, labels=labels)
       loss = tf.reduce_mean(cross_entropy, name='xentropy_mean')
     if aux_logits is not None:

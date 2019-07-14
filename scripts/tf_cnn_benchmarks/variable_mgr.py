@@ -121,7 +121,7 @@ class VariableMgr(object):
 
   def savable_variables(self):
     """Returns a list/dict of savable variables to pass to tf.train.Saver."""
-    return tf.global_variables()
+    return tf.compat.v1.global_variables()
 
   def trainable_variables_on_device(self,
                                     rel_device_num,
@@ -144,7 +144,7 @@ class VariableMgr(object):
           if v.name.startswith('v%s/' % abs_device_num)
       ]
     else:
-      params = tf.trainable_variables()
+      params = tf.compat.v1.trainable_variables()
     return params
 
   @contextlib.contextmanager
@@ -217,7 +217,7 @@ class VariableMgrLocalFetchFromPS(VariableMgr):
     return False
 
   def create_outer_variable_scope(self, device_num):
-    return tf.variable_scope('v', reuse=bool(device_num) or self._reuse_vars,
+    return tf.compat.v1.variable_scope('v', reuse=bool(device_num) or self._reuse_vars,
                              use_resource=self.use_resource_vars)
 
   def preprocess_device_grads(self, device_grads):

@@ -128,7 +128,7 @@ class DeepSpeech2Model(model_lib.Model):
   # Supported rnn cells.
   SUPPORTED_RNNS = {
       'lstm': tf.nn.rnn_cell.BasicLSTMCell,
-      'rnn': tf.nn.rnn_cell.RNNCell,
+      'rnn': tf.compat.v1.nn.rnn_cell.RNNCell,
       'gru': tf.nn.rnn_cell.GRUCell,
   }
 

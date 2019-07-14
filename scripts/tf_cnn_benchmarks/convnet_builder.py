@@ -117,7 +117,7 @@ class ConvNetBuilder(object):
     # devices and machines as type `dtype`, not `cast_dtype`. In particular,
     # this means in fp16 mode, variables are transferred as fp32 values, not
     # fp16 values, which uses extra bandwidth.
-    var = tf.get_variable(name, shape, dtype, *args, **kwargs)
+    var = tf.compat.v1.get_variable(name, shape, dtype, *args, **kwargs)
     return tf.cast(var, cast_dtype)
 
   def _conv2d_impl(self, input_layer, num_channels_in, filters, kernel_size,
@@ -168,7 +168,7 @@ class ConvNetBuilder(object):
       kernel_initializer = tf.variance_scaling_initializer()
     name = 'conv' + str(self.counts['conv'])
     self.counts['conv'] += 1
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
       strides = [1, d_height, d_width, 1]
       if self.data_format == 'NCHW':
         strides = [strides[0], strides[3], strides[1], strides[2]]
@@ -319,7 +319,7 @@ class ConvNetBuilder(object):
       num_channels_in = self.top_size
     name = 'affine' + str(self.counts['affine'])
     self.counts['affine'] += 1
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
       init_factor = 2. if activation == 'relu' else 1.
       stddev = stddev or np.sqrt(init_factor / num_channels_in)
       kernel = self.get_variable(
@@ -331,7 +331,7 @@ class ConvNetBuilder(object):
                                  initializer=tf.constant_initializer(bias))
       mlperf.logger.log(key=mlperf.tags.MODEL_HP_DENSE,
                         value=num_out_channels)
-      logits = tf.nn.xw_plus_b(input_layer, kernel, biases)
+      logits = tf.compat.v1.nn.xw_plus_b(input_layer, kernel, biases)
       if activation == 'relu':
         mlperf.logger.log(key=mlperf.tags.MODEL_HP_RELU)
         affine1 = tf.nn.relu(logits, name=name)
@@ -459,7 +459,7 @@ class ConvNetBuilder(object):
     self.counts['batchnorm'] += 1
 
     center = True
-    with tf.variable_scope(name) as scope:
+    with tf.compat.v1.variable_scope(name) as scope:
       if self.use_tf_layers:
         bn = tf.contrib.layers.batch_norm(
             input_layer,
